@@ -1,0 +1,153 @@
+#!/usr/bin/python3
+
+import sys
+import os
+import time
+from pynput import keyboard
+from tendo import singleton
+import math
+
+me = singleton.SingleInstance()
+
+N = 400
+sx = 0
+sy = 0
+
+vx = 0
+vy = 0
+vmax = 4
+
+dix = 0
+diy = 0
+
+acc = 200
+
+running = True
+dt = 0
+
+
+def on_press(key):
+    global dix
+    global diy
+    try:
+        if key.char == 'l':
+            dix = 1
+            return
+
+        if key.char== 'h':
+            dix = -1
+            return
+
+        if key.char == 'j':
+            diy = 1
+            return
+
+        if key.char == 'k':
+            diy = -1
+            return
+
+    except AttributeError:
+        pass
+
+def on_release(key):
+    global dix
+    global diy
+    try:
+        if key == keyboard.Key.ctrl_l:
+            return False
+        if key == keyboard.Key.alt_l:
+            return False
+        if key.char == 'h' or key.char == 'l':
+            dix = 0
+        if key.char == 'j' or key.char == 'k':
+            diy = 0
+
+    except AttributeError:
+        pass
+
+listener = keyboard.Listener(
+    on_press=on_press,
+    on_release=on_release)
+
+listener.start()
+
+
+def update():
+    global dix
+    global diy
+    updateDistance()
+    updateVelocity()
+
+    print(vx)
+    str_sx = format(sx, 'f')
+    str_sy = format(sy, 'f')
+    os.system("xdotool getactivewindow windowmove --relative -- " + str_sx  + " " + str_sy)
+
+def updateDistance():
+    global sx
+    global sy
+    global dix
+    global diy
+    if (dix == 1 or dix == 0):
+        sx = math.ceil(dt*vx*N + acc*pow(dt, 2)*0.5*dix*N)
+    elif (dix == -1 or dix == 0):
+        sx = math.floor(dt*vx*N + acc*pow(dt, 2)*0.5*dix*N)
+    if (diy == 1 or diy == 0):
+        sy = math.ceil(dt*vy*N + acc*pow(dt, 2)*0.5*diy*N)
+    elif (diy == -1 or diy == 0):
+        sy = math.floor(dt*vy*N + acc*pow(dt, 2)*0.5*diy*N)
+
+def updateVelocity():
+    if(dix != 0 or diy != 0):
+        accelerate()
+    else:
+        decelerate()
+
+    limitVelocity()
+
+def accelerate():
+    global vx
+    global vy
+
+    vx += acc*dt*dix
+    vy += acc*dt*diy
+
+    pass
+
+def decelerate():
+    global vx
+    global vy
+
+    if(abs(vx) <= 0.2):
+        vx = 0
+
+    if(abs(vy) <= 0.2):
+        vy = 0
+
+    if(vx != 0):
+        vx *= 0.6
+    if(vy != 0):
+        vy *= 0.6
+
+
+def limitVelocity():
+    global vx
+    global vy
+    vw = math.sqrt(pow(vx, 2) + pow(vy, 2))
+
+    if (vw >= vmax):
+        vx = (vx/vw) * vmax
+        vy = (vy/vw) * vmax
+
+
+
+while listener.is_alive():
+    begin = time.time()
+
+    if(dt >= 0.006):
+        update()
+        dt = 0
+
+    dt += time.time() - begin
+    pass
+

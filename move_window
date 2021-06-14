@@ -4,10 +4,10 @@ import sys
 import os
 import time
 from pynput import keyboard
-from tendo import singleton
+#from tendo import singleton
 import math
 
-me = singleton.SingleInstance()
+#me = singleton.SingleInstance()
 
 N = 400
 sx = 0
@@ -15,14 +15,15 @@ sy = 0
 
 vx = 0
 vy = 0
-vmax = 4
+vmax = 10
 
 dix = 0
 diy = 0
 
 acc = 200
 
-running = True
+ctrl = False
+alt = False
 dt = 0
 
 
@@ -32,34 +33,39 @@ def on_press(key):
     try:
         if key.char == 'l':
             dix = 1
-            return
 
-        if key.char== 'h':
+        elif key.char== 'h':
             dix = -1
-            return
 
-        if key.char == 'j':
+        elif key.char == 'j':
             diy = 1
-            return
 
-        if key.char == 'k':
+        elif key.char == 'k':
             diy = -1
-            return
 
     except AttributeError:
         pass
 
 def on_release(key):
+    global ctrl
+    global alt
     global dix
     global diy
     try:
         if key == keyboard.Key.ctrl_l:
-            return False
+            ctrl = True
         if key == keyboard.Key.alt_l:
+            alt = True
+        if ctrl and alt:
             return False
-        if key.char == 'h' or key.char == 'l':
+
+        if key.char == 'h' and dix != 1:
             dix = 0
-        if key.char == 'j' or key.char == 'k':
+        if key.char == 'l' and dix != -1:
+            dix = 0
+        if key.char == 'j' and diy != -1:
+            diy = 0
+        if key.char == 'k' and diy != 1:
             diy = 0
 
     except AttributeError:
@@ -78,32 +84,39 @@ def update():
     updateDistance()
     updateVelocity()
 
-    print(vx)
-    str_sx = format(sx, 'f')
-    str_sy = format(sy, 'f')
-    os.system("xdotool getactivewindow windowmove --relative -- " + str_sx  + " " + str_sy)
+    #psx = format(sx, 'f')
+    #psy = format(sy, 'f')
+
+    psx = str(int(sx))
+    psy = str(int(sy))
+
+    os.system("xdotool getactivewindow windowmove --relative -- " + psx  + " " + psy)
+
 
 def updateDistance():
     global sx
     global sy
-    global dix
-    global diy
-    if (dix == 1 or dix == 0):
+
+    if (dix != -1):
         sx = math.ceil(dt*vx*N + acc*pow(dt, 2)*0.5*dix*N)
-    elif (dix == -1 or dix == 0):
+    elif (dix != 1):
         sx = math.floor(dt*vx*N + acc*pow(dt, 2)*0.5*dix*N)
-    if (diy == 1 or diy == 0):
+
+    if (diy != -1):
         sy = math.ceil(dt*vy*N + acc*pow(dt, 2)*0.5*diy*N)
-    elif (diy == -1 or diy == 0):
+    elif (diy != 1):
         sy = math.floor(dt*vy*N + acc*pow(dt, 2)*0.5*diy*N)
 
+
 def updateVelocity():
-    if(dix != 0 or diy != 0):
+    #(sign(dix) == sign(vx)):
+    if dix != 0 or diy != 0:
         accelerate()
-    else:
+    if dix == 0 or diy == 0:
         decelerate()
 
     limitVelocity()
+
 
 def accelerate():
     global vx
@@ -112,22 +125,21 @@ def accelerate():
     vx += acc*dt*dix
     vy += acc*dt*diy
 
-    pass
 
 def decelerate():
     global vx
     global vy
 
-    if(abs(vx) <= 0.2):
+    if abs(vx) <= 0.2:
         vx = 0
 
-    if(abs(vy) <= 0.2):
+    if abs(vy) <= 0.2:
         vy = 0
 
-    if(vx != 0):
-        vx *= 0.6
-    if(vy != 0):
-        vy *= 0.6
+    if vx != 0:
+        vx *= 0.6 + 0.4*abs(dix)
+    if vy != 0:
+        vy *= 0.6 + 0.4*abs(diy)
 
 
 def limitVelocity():
@@ -140,14 +152,12 @@ def limitVelocity():
         vy = (vy/vw) * vmax
 
 
-
 while listener.is_alive():
     begin = time.time()
 
-    if(dt >= 0.006):
+    if dt >= 0.006:
         update()
         dt = 0
 
     dt += time.time() - begin
-    pass
 
